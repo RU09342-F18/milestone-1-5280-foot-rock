@@ -62,34 +62,35 @@ __interrupt void USCI_A0 (void)
     // If there is data (i.e. not Null)
     switch(__even_in_range(UCA0IV, USCI_UCTXIFG)) // UCA0IV == USCI_UCRXIFG
     {
-        case USCI_NONE:
-            break;
-
         case USCI_UCRXIFG:
             switch(byteCount)
             {
                 case 0:
                     while(!(UCA0IFG & UCTXIFG)); // wait while transmitting
-                    byteLn = UCA0TXBUF; // byte length
-                    UCA0TXBUF = UCA0RXBUF - 0x03; // transmit all but first 3 bytes
+                    byteLn = UCA0RXBUF; // byte length
+                    UCA0TXBUF = byteLn - 0x03; // transmit all but first 3 bytes
                     __no_operation();
                     break;
                 case 1:
-                    TA0CCR1 = (UCA0RXBUF); // red
+                    TA0CCR1 = (0xFF ^ UCA0RXBUF); // red
                     break;
                 case 2:
-                    TA0CCR2 = (UCA0RXBUF); // green
+                    TA0CCR2 = (0xFF ^ UCA0RXBUF); // green
                     break;
                 case 3:
-                    TA0CCR3 = (UCA0RXBUF); // blue
+                    TA0CCR3 = (0xFF ^ UCA0RXBUF); // blue
                     break;
                 default:
                     while(!(UCA0IFG & UCTXIFG));
                     UCA0TXBUF = UCA0RXBUF; //Just transmit the incoming byte on to the next board
+                    __no_operation();
+                    break;
             }
-            if(UCA0RXBUF == byteLn) // reset counter if last byte
+            if(byteCount >= byteLn) // reset counter if last byte
             {
-                byteCount = 1;
+                byteCount = 0;
+                byteLn = 0;
+                P1OUT &= ~BIT0; // status off
             }
             else
             {
@@ -102,7 +103,5 @@ __interrupt void USCI_A0 (void)
 
         default:
             break;
-
     }
-    P1OUT &= ~BIT0; // status off
 }
